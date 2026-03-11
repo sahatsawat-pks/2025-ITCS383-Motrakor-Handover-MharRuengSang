@@ -18,7 +18,8 @@ SteamJek is a full-stack digital game distribution platform featuring:
 - **JWT Authentication** — Secure login and registration system
 
 ---
-
+## How to run
+Download An EXE FROM THIS link  https://drive.google.com/file/d/1na5gS0E7O7xBdd2OkDYnocyo1l7V_XYY/view?usp=sharing
 ## 🛠 Tech Stack
 
 | Layer | Technology | Version |
