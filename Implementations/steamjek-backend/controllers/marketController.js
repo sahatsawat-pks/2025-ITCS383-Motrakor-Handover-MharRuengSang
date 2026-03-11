@@ -4,16 +4,16 @@ const pool = require('../db');
 const getListings = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT market_listings.id, items.name, items.description,
-              items.image_url, market_listings.price,
-              users.name as seller_name, games.title as game_title,
-              market_listings.listed_at
-       FROM market_listings
-       JOIN items ON market_listings.item_id = items.id
-       JOIN users ON market_listings.seller_id = users.id
-       JOIN games ON items.game_id = games.id
-       WHERE market_listings.is_sold = false
-       ORDER BY market_listings.listed_at DESC`
+      `SELECT ml.id, it.name, it.description, it.image_url, 
+              it.rarity, ml.price, ml.quantity,
+              u.name as seller_name, g.title as game_title,
+              ml.listed_at
+       FROM market_listings ml
+       JOIN item_types it ON ml.item_type_id = it.id
+       JOIN users u ON ml.seller_id = u.id
+       JOIN games g ON it.game_id = g.id
+       WHERE ml.is_sold = false
+       ORDER BY ml.listed_at DESC`
     );
     res.json(result.rows);
   } catch (err) {
@@ -22,15 +22,17 @@ const getListings = async (req, res) => {
   }
 };
 
-// GET MY ITEMS
+// GET MY ITEMS (inventory)
 const getMyItems = async (req, res) => {
   const owner_id = req.user.id;
   try {
     const result = await pool.query(
-      `SELECT items.*, games.title as game_title
-       FROM items
-       JOIN games ON items.game_id = games.id
-       WHERE items.owner_id = $1`,
+      `SELECT ui.id, it.name, it.description, it.image_url,
+              it.rarity, ui.quantity, g.title as game_title
+       FROM user_items ui
+       JOIN item_types it ON ui.item_type_id = it.id
+       JOIN games g ON it.game_id = g.id
+       WHERE ui.owner_id = $1 AND ui.quantity > 0`,
       [owner_id]
     );
     res.json(result.rows);
@@ -45,12 +47,11 @@ const getMyListings = async (req, res) => {
   const seller_id = req.user.id;
   try {
     const result = await pool.query(
-      `SELECT market_listings.*, items.name as item_name,
-              items.image_url
-       FROM market_listings
-       JOIN items ON market_listings.item_id = items.id
-       WHERE market_listings.seller_id = $1
-       ORDER BY market_listings.listed_at DESC`,
+      `SELECT ml.*, it.name as item_name, it.image_url, it.rarity
+       FROM market_listings ml
+       JOIN item_types it ON ml.item_type_id = it.id
+       WHERE ml.seller_id = $1 AND ml.is_sold = false
+       ORDER BY ml.listed_at DESC`,
       [seller_id]
     );
     res.json(result.rows);
@@ -63,34 +64,30 @@ const getMyListings = async (req, res) => {
 // CREATE LISTING (sell an item)
 const createListing = async (req, res) => {
   const seller_id = req.user.id;
-  const { item_id, price } = req.body;
+  const { item_type_id, quantity, price } = req.body;
   try {
-    // Check if user owns the item
-    const item = await pool.query(
-      'SELECT * FROM items WHERE id = $1 AND owner_id = $2',
-      [item_id, seller_id]
+    // Check if user owns enough of this item
+    const userItem = await pool.query(
+      'SELECT * FROM user_items WHERE owner_id = $1 AND item_type_id = $2',
+      [seller_id, item_type_id]
     );
-    if (item.rows.length === 0) {
+    if (userItem.rows.length === 0 || userItem.rows[0].quantity < quantity) {
       return res.status(403).json({ 
-        message: 'You do not own this item' 
+        message: 'You do not have enough of this item' 
       });
     }
 
-    // Check if item is already listed
-    const existing = await pool.query(
-      'SELECT * FROM market_listings WHERE item_id = $1 AND is_sold = false',
-      [item_id]
+    // Deduct quantity from inventory
+    await pool.query(
+      'UPDATE user_items SET quantity = quantity - $1 WHERE owner_id = $2 AND item_type_id = $3',
+      [quantity, seller_id, item_type_id]
     );
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ 
-        message: 'Item is already listed on the market' 
-      });
-    }
 
+    // Create listing
     const listing = await pool.query(
-      `INSERT INTO market_listings (item_id, seller_id, price)
-       VALUES ($1, $2, $3) RETURNING *`,
-      [item_id, seller_id, price]
+      `INSERT INTO market_listings (item_type_id, seller_id, quantity, price)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [item_type_id, seller_id, quantity, price]
     );
     res.status(201).json({
       message: 'Item listed successfully',
@@ -107,7 +104,7 @@ const buyItem = async (req, res) => {
   const buyer_id = req.user.id;
   const { listingId } = req.params;
   try {
-    // Get listing details
+    // Get listing
     const listing = await pool.query(
       'SELECT * FROM market_listings WHERE id = $1 AND is_sold = false',
       [listingId]
@@ -118,7 +115,7 @@ const buyItem = async (req, res) => {
       });
     }
 
-    const { item_id, seller_id, price } = listing.rows[0];
+    const { item_type_id, seller_id, quantity, price } = listing.rows[0];
 
     // Prevent buying your own item
     if (seller_id === buyer_id) {
@@ -127,10 +124,13 @@ const buyItem = async (req, res) => {
       });
     }
 
-    // Transfer item ownership
+    // Add item to buyer inventory
     await pool.query(
-      'UPDATE items SET owner_id = $1 WHERE id = $2',
-      [buyer_id, item_id]
+      `INSERT INTO user_items (owner_id, item_type_id, quantity)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (owner_id, item_type_id) 
+       DO UPDATE SET quantity = user_items.quantity + $3`,
+      [buyer_id, item_type_id, quantity]
     );
 
     // Mark listing as sold
@@ -142,14 +142,15 @@ const buyItem = async (req, res) => {
     // Record transaction
     await pool.query(
       `INSERT INTO market_transactions 
-        (listing_id, buyer_id, seller_id, item_id, price)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [listingId, buyer_id, seller_id, item_id, price]
+        (listing_id, buyer_id, seller_id, item_type_id, quantity, price)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [listingId, buyer_id, seller_id, item_type_id, quantity, price]
     );
 
     res.json({
       message: 'Item purchased successfully',
-      item_id,
+      item_type_id,
+      quantity,
       price
     });
   } catch (err) {
