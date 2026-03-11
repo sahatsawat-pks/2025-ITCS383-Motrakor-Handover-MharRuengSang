@@ -698,15 +698,7 @@
       <a class="nav-link" href="page7_profile.html"><span class="nav-icon">👤</span>Profile</a>
       <a class="nav-link" href="page3_cart.html"><span class="nav-icon">🛒</span>Cart<span
           class="nav-badge">2</span></a>
-      <div class="sidebar-foot">
-        <a href="page7_profile.html" class="user-pill">
-          <div class="u-av">AX</div>
-          <div>
-            <div class="u-name">Alex_Gamer99</div>
-            <div class="u-bal">$124.50</div>
-          </div>
-        </a>
-      </div>
+      <div class="sidebar-foot" id="user-context"></div>
     </nav>
     <div class="main">
       <div class="topbar">
@@ -759,16 +751,9 @@
   </div>
   <div class="toasts" id="toasts"></div>
 
+  <script src="api.js"></script>
   <script>
-    const GAMES = [
-      { id: 0, title: "NebulaSiege", dev: "StarForge Studios", genre: "strategy", emoji: "🌌", hours: 142, local: false, lastPlayed: "Today" },
-      { id: 1, title: "EcoTycoon", dev: "GreenBit", genre: "strategy", emoji: "🌿", hours: 88, local: false, lastPlayed: "2 days ago" },
-      { id: 2, title: "PixelFarm", dev: "CozyCode", genre: "adventure", emoji: "🌾", hours: 210, local: true, lastPlayed: "Yesterday" },
-      { id: 3, title: "CryptoKnight", dev: "PixelRealm", genre: "rpg", emoji: "⚔️", hours: 15, local: false, lastPlayed: "1 week ago" },
-      { id: 4, title: "PuzzleMind X", dev: "ThinkSoft", genre: "puzzle", emoji: "🧩", hours: 42, local: true, lastPlayed: "3 days ago" },
-      { id: 5, title: "BulletZone", dev: "RapidFire Games", genre: "action", emoji: "💥", hours: 67, local: true, lastPlayed: "Yesterday" },
-      { id: 6, title: "ShadowRift", dev: "Nocturne Games", genre: "adventure", emoji: "🌑", hours: 5, local: false, lastPlayed: "2 weeks ago" },
-    ];
+    let GAMES = [];
     let viewMode = 'grid';
     let cur = 'all';
 
@@ -776,24 +761,82 @@
 
     function listRow(g) { return `<div class="ll-row"><div class="ll-thumb">${g.emoji}</div><div class="ll-info"><div class="ll-title">${g.title}</div><div class="ll-dev">by ${g.dev}</div><div class="ll-meta"><span class="ll-tag">${g.genre}</span><span class="ll-hours">${g.hours}h played</span><span style="font-size:11px;color:var(--muted)">Last: ${g.lastPlayed}</span></div></div><div class="ll-right"><span class="cloud-badge"><div class="cloud-dot ${g.local ? 'local' : 'cloud'}"></div><span style="font-size:11px;color:var(--muted2)">${g.local ? 'Downloaded' : 'Cloud'}</span></span><div class="ll-actions"><button class="btn btn-primary btn-sm" onclick="play('${g.title}')">▶ Play</button><button class="btn btn-ghost btn-sm" onclick="toggleLocal(${g.id})">${g.local ? '🗑' : '⬇'}</button></div></div></div>` }
 
+    function updateStats() {
+      const owned = GAMES.length;
+      const hours = GAMES.reduce((sum, g) => sum + g.hours, 0);
+      const local = GAMES.filter(g => g.local).length;
+      const cloud = GAMES.length - local;
+      
+      const statsHtml = `
+      <div class="lib-stats">
+        <div class="ls-card"><div class="ls-val" style="color:var(--accent)">${owned}</div><div class="ls-label">Games Owned</div></div>
+        <div class="ls-card"><div class="ls-val" style="color:var(--gold)">${hours}h</div><div class="ls-label">Total Playtime</div></div>
+        <div class="ls-card"><div class="ls-val" style="color:var(--green)">${local}</div><div class="ls-label">Downloaded</div></div>
+        <div class="ls-card"><div class="ls-val" style="color:#a78bfa">${cloud}</div><div class="ls-label">Cloud Only</div></div>
+      </div>`;
+      
+      const libControls = document.querySelector('.lib-controls');
+      const existingStats = document.querySelector('.lib-stats');
+      if (existingStats) {
+        existingStats.outerHTML = statsHtml;
+      }
+    }
+
     function render(list) {
       const c = document.getElementById('lib-container');
+      if (list.length === 0) {
+         c.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px;margin-bottom:12px">📭</div><h3>No games found</h3></div>`;
+         return;
+      }
       if (viewMode === 'grid') { c.className = 'lib-grid'; c.innerHTML = list.map(gridCard).join('') }
       else { c.className = 'lib-list'; c.innerHTML = list.map(listRow).join('') }
     }
+    
     function getFiltered() {
       if (cur === 'local') return GAMES.filter(g => g.local);
       if (cur === 'cloud') return GAMES.filter(g => !g.local);
       if (cur === 'recent') return GAMES.filter(g => g.lastPlayed === 'Today' || g.lastPlayed === 'Yesterday');
       return GAMES;
     }
+    
     function setFilter(f, el) { cur = f; document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on')); el.classList.add('on'); render(getFiltered()) }
     function setView(v) { viewMode = v; document.getElementById('vg').classList.toggle('on', v === 'grid'); document.getElementById('vl').classList.toggle('on', v === 'list'); render(getFiltered()) }
-    function doSearch(q) { const l = q ? GAMES.filter(g => g.title.toLowerCase().includes(q.toLowerCase()) || g.genre.includes(q.toLowerCase())) : getFiltered(); render(l) }
-    function play(title) { toast(`Launching ${title}… 🚀`, 's') }
-    function toggleLocal(id) { const g = GAMES.find(x => x.id === id); g.local = !g.local; toast(g.local ? `${g.title} downloaded 💾` : `Local files deleted — cloud save preserved ☁️`, g.local ? 's' : 'i'); render(getFiltered()) }
-    function toast(msg, t) { const c = document.getElementById('toasts'); const el = document.createElement('div'); el.className = `tst ${t}`; el.innerHTML = `<span>${t === 's' ? '✅' : 'ℹ️'}</span>${msg}`; c.appendChild(el); setTimeout(() => el.remove(), 3000) }
-    render(GAMES);
+    function doSearch(q) { const l = q ? GAMES.filter(g => g.title.toLowerCase().includes(q.toLowerCase()) || g.genre.toLowerCase().includes(q.toLowerCase())) : getFiltered(); render(l) }
+    function play(title) { showToast(`Launching ${title}… 🚀`, 's') }
+    function toggleLocal(id) { 
+      const g = GAMES.find(x => x.id === id); 
+      g.local = !g.local; 
+      showToast(g.local ? `${g.title} downloaded 💾` : `Local files deleted — cloud save preserved ☁️`, g.local ? 's' : 'i'); 
+      updateStats();
+      render(getFiltered());
+    }
+
+    async function initPage() {
+      if (!Auth.isAuthenticated()) {
+        const c = document.getElementById('lib-container');
+        c.innerHTML = `<div style="text-align:center;padding:60px 20px"><div style="font-size:40px;margin-bottom:14px">🔒</div><div style="font-size:22px;font-family:var(--fw);font-weight:700;margin-bottom:8px">Login Required</div><div style="color:var(--muted);margin-bottom:20px;font-size:14px">Please log in to view your library</div><a href="page1_store.html" class="btn btn-primary">Go to Login →</a></div>`;
+        return;
+      }
+      try {
+        const data = await apiFetch('/purchases');
+        GAMES = data.map(p => ({
+          id: p.id,
+          title: p.title,
+          emoji: p.cover_image || '🎮',
+          dev: 'Developer', // Mock
+          genre: 'Unspecified', // Mock
+          hours: Math.floor(Math.random() * 100), // Mock
+          local: Math.random() > 0.5, // Mock
+          lastPlayed: ['Today', 'Yesterday', '2 days ago', '1 week ago'][Math.floor(Math.random() * 4)] // Mock
+        }));
+        updateStats();
+        render(GAMES);
+      } catch (err) {
+        showToast(err.message || 'Failed to load library', 'e');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initPage);
   </script>
 </body>
 

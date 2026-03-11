@@ -723,22 +723,13 @@
       <a class="nav-link" href="page7_profile.html"><span class="nav-icon">👤</span>Profile</a>
       <a class="nav-link active" href="page3_cart.html"><span class="nav-icon">🛒</span>Cart<span class="nav-badge"
           id="nb">2</span></a>
-      <div class="sidebar-foot">
-        <a href="page7_profile.html" class="user-pill">
-          <div class="u-av">AX</div>
-          <div>
-            <div class="u-name">Alex_Gamer99</div>
-            <div class="u-bal">$124.50</div>
-          </div>
-        </a>
-      </div>
+      <div class="sidebar-foot" id="user-context"></div>
     </nav>
     <div class="main">
       <div class="topbar">
         <div class="tb-title">🛒 Cart</div>
-        <div class="tb-right">
-          <a href="page1_store.html" class="btn btn-ghost btn-sm">← Continue Shopping</a>
-          <a href="page7_profile.html" class="btn btn-primary btn-sm">👤 Profile</a>
+        <div class="tb-right" id="topbar-right">
+          <!-- Dynamically injected topbar buttons -->
         </div>
       </div>
       <div class="content">
@@ -798,42 +789,273 @@
   </div>
   <div class="toasts" id="toasts"></div>
 
-  <script>
-    const GAMES = [
-      { id: 0, title: "NebulaSiege", dev: "StarForge Studios", genre: "strategy", price: 34.99, emoji: "🌌" },
-      { id: 4, title: "VoidHunter", dev: "DarkMatter Dev", genre: "action", price: 29.99, emoji: "🚀" },
-    ];
-    let cart = [...GAMES];
+  <!-- AUTH MODAL -->
+  <div class="modal-overlay" id="auth-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title" id="auth-title">Welcome to SteamJek</h3>
+        <button class="close-btn" onclick="closeAuthModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Login</div>
+          <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</div>
+        </div>
 
-    function render() {
+        <!-- Login Form -->
+        <form id="login-form" onsubmit="handleAuth(event, 'login')">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="login-email" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="login-password" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">Login</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" style="display: none;" onsubmit="handleAuth(event, 'register')">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-input" id="reg-username" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="reg-email" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="reg-password" required>
+          </div>
+          <button type="submit" class="btn btn-purple" style="width: 100%; justify-content: center; margin-top: 10px;">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <style>
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+      width: 100%; max-width: 400px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .modal-head {
+      padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-title { font-family: var(--fw); font-size: 20px; font-weight: 700; color: #fff; }
+    .close-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; transition: color 0.2s; }
+    .close-btn:hover { color: #fff; }
+    .modal-body { padding: 24px; }
+    .auth-tabs { display: flex; gap: 4px; background: var(--bg2); padding: 4px; border-radius: 8px; margin-bottom: 24px; }
+    .auth-tab { flex: 1; padding: 8px 0; text-align: center; font-size: 14px; font-weight: 600; color: var(--muted2); cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+    .auth-tab.active { background: var(--panel2); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input {
+      width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+      color: #fff; font-family: var(--fb); font-size: 14px; transition: border-color 0.2s;
+    }
+    .form-input:focus { outline: none; border-color: var(--accent); }
+    
+    .cart-wrap {
+      position: relative;
+    }
+  </style>
+
+  <script>
+    let cartGames = [];
+    
+    // --- AUTH FLOW ---
+    function showAuthModal() { document.getElementById('auth-overlay').style.display = 'flex'; }
+    function closeAuthModal() { document.getElementById('auth-overlay').style.display = 'none'; }
+    
+    function switchAuthTab(tab) {
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+      document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('auth-title').innerText = tab === 'login' ? 'Welcome Back' : 'Create Account';
+    }
+
+    async function handleAuth(e, type) {
+      e.preventDefault();
+      try {
+        if (type === 'login') {
+          const email = document.getElementById('login-email').value;
+          const password = document.getElementById('login-password').value;
+          await Auth.login(email, password);
+        } else {
+          const username = document.getElementById('reg-username').value;
+          const email = document.getElementById('reg-email').value;
+          const password = document.getElementById('reg-password').value;
+          const res = await apiFetch('/auth/register', { method: 'POST', body: JSON.stringify({ username, email, password }) });
+          showToast('Registration successful! Please login.', 's');
+          switchAuthTab('login');
+          return; // Stop here, need to login now
+        }
+        closeAuthModal();
+        initPage(); // Refresh UI
+      } catch (err) {
+        // Errors handled by api.js
+      }
+    }
+
+    function doLogout() {
+      Auth.logout();
+      showToast('Logged out successfully', 'i');
+      initPage();
+    }
+
+    // --- UI UPDATES ---
+    function updateTopBar() {
+      const tbRight = document.getElementById('topbar-right');
+      const isAuth = Auth.isAuthenticated();
+      const userStr = localStorage.getItem('steamjek_user');
+      let user = null;
+      try { user = userStr ? JSON.parse(userStr) : null; } catch(e){}
+
+      tbRight.innerHTML = ''; // Clear
+
+      const shopBtn = document.createElement('a');
+      shopBtn.href = 'page1_store.html';
+      shopBtn.className = 'btn btn-ghost btn-sm';
+      shopBtn.innerHTML = `← Continue Shopping`;
+      tbRight.appendChild(shopBtn);
+
+      if (isAuth && user) {
+        // Profile Btn
+        const profBtn = document.createElement('a');
+        profBtn.href = 'page7_profile.html';
+        profBtn.className = 'btn btn-primary btn-sm';
+        profBtn.innerHTML = `👤 Profile`;
+        tbRight.appendChild(profBtn);
+
+        // Logout Btn
+        const logBtn = document.createElement('button');
+        logBtn.className = 'btn btn-ghost btn-sm';
+        logBtn.innerHTML = `Logout`;
+        logBtn.onclick = doLogout;
+        tbRight.appendChild(logBtn);
+        updateSidebarUser();
+      } else {
+        const authBtn = document.createElement('button');
+        authBtn.innerHTML = `👤 Login / Register`;
+        authBtn.className = 'btn btn-primary btn-sm';
+        authBtn.onclick = showAuthModal;
+        tbRight.appendChild(authBtn);
+        updateSidebarUser();
+      }
+    }
+
+
+    function renderCart() {
       const list = document.getElementById('cart-list');
       const rows = document.getElementById('oc-rows');
       const sub = document.getElementById('cart-sub');
       const total = document.getElementById('total-val');
-      document.getElementById('nb').textContent = cart.length;
-      if (cart.length === 0) {
+      
+      const dot = document.getElementById('nb');
+      if(dot) dot.textContent = cartGames.length;
+      
+      if (cartGames.length === 0) {
         list.innerHTML = `<div class="empty-cart"><div class="empty-icon">🛒</div><div class="empty-title">Your cart is empty</div><div class="empty-sub">Add some games from the store to get started</div><a href="page1_store.html" class="btn btn-primary">Browse Store →</a></div>`;
-        rows.innerHTML = ''; total.textContent = '$0.00'; sub.textContent = 'No items'; return;
+        rows.innerHTML = ''; 
+        total.textContent = '$0.00'; 
+        sub.textContent = 'No items'; 
+        return;
       }
-      sub.textContent = `${cart.length} item${cart.length > 1 ? 's' : ''} ready for purchase`;
-      list.innerHTML = cart.map(g => `
+      
+      sub.textContent = `${cartGames.length} item${cartGames.length > 1 ? 's' : ''} ready for purchase`;
+      
+      list.innerHTML = cartGames.map(g => `
     <div class="cart-item">
-      <div class="ci-thumb">${g.emoji}</div>
+      <div class="ci-thumb" style="font-size:36px; padding: 10px;">${g.emoji || '🎮'}</div>
       <div class="ci-info">
         <div class="ci-title">${g.title}</div>
-        <div class="ci-dev">by ${g.dev}</div>
-        <span class="ci-genre">${g.genre}</span>
+        <div class="ci-dev">by ${g.creator_id ? `Creator ${g.creator_id}` : (g.dev || 'Developer')}</div>
+        <span class="ci-genre">${(g.genre || 'Unspecified').toUpperCase()}</span>
       </div>
-      <div class="ci-price">$${g.price.toFixed(2)}</div>
+      <div class="ci-price">${Number(g.price) === 0 ? 'FREE' : '$' + Number(g.price).toFixed(2)}</div>
       <button class="ci-remove" onclick="remove(${g.id})" title="Remove">✕</button>
     </div>`).join('');
-      rows.innerHTML = cart.map(g => `<div class="oc-row"><span>${g.title}</span><span>$${g.price.toFixed(2)}</span></div>`).join('');
-      total.textContent = '$' + cart.reduce((s, g) => s + g.price, 0).toFixed(2);
+    
+      rows.innerHTML = cartGames.map(g => `<div class="oc-row"><span>${g.title}</span><span>${Number(g.price) === 0 ? 'FREE' : '$' + Number(g.price).toFixed(2)}</span></div>`).join('');
+      total.textContent = '$' + cartGames.reduce((s, g) => s + Number(g.price), 0).toFixed(2);
     }
-    function remove(id) { cart = cart.filter(g => g.id !== id); toast('Item removed', 'i'); render() }
-    function checkout() { if (!cart.length) { toast('Cart is empty!', 'i'); return } cart = []; render(); document.getElementById('modal').classList.add('open') }
-    function toast(msg, t) { const c = document.getElementById('toasts'); const el = document.createElement('div'); el.className = `tst ${t}`; el.innerHTML = `<span>${t === 's' ? '✅' : 'ℹ️'}</span>${msg}`; c.appendChild(el); setTimeout(() => el.remove(), 3000) }
-    render();
+    
+    function remove(id) { 
+        // Remove from local array
+        cartGames = cartGames.filter(g => Number(g.id) !== Number(id)); 
+        
+        // Remove from localStorage array
+        const cartStr = localStorage.getItem('steamjek_cart');
+        if (cartStr) {
+            let lsCart = JSON.parse(cartStr);
+            lsCart = lsCart.filter(cid => Number(cid) !== Number(id));
+            localStorage.setItem('steamjek_cart', JSON.stringify(lsCart));
+        }
+        
+        showToast('Item removed', 'i'); 
+        renderCart(); 
+    }
+    
+    function checkout() { 
+        if (!Auth.isAuthenticated()) {
+            showToast('Please login to checkout', 'i');
+            showAuthModal();
+            return;
+        }
+    
+        if (!cartGames.length) { 
+            showToast('Cart is empty!', 'i'); 
+            return; 
+        } 
+        
+        // Clear cart
+        cartGames = []; 
+        localStorage.setItem('steamjek_cart', JSON.stringify([]));
+        
+        renderCart(); 
+        document.getElementById('modal').classList.add('open'); 
+    }
+
+    async function initPage() {
+      updateTopBar();
+      
+      try {
+        // Fetch cart ids from local storage
+        const cartStr = localStorage.getItem('steamjek_cart');
+        const cartIds = cartStr ? JSON.parse(cartStr) : [];
+        
+        if (cartIds.length === 0) {
+            cartGames = [];
+            renderCart();
+            return;
+        }
+
+        // Fetch details for all games in the cart
+        // Ideally there would be a bulk endpoint, but we loop for now
+        const gamePromises = cartIds.map(id => apiFetch(`/games/${id}`).catch(e => null));
+        const results = await Promise.all(gamePromises);
+        
+        // Filter out any failed requests (game not found)
+        cartGames = results.filter(g => g !== null);
+        renderCart();
+
+      } catch (e) {
+        console.error("Error loading cart:", e);
+        showToast('Error loading cart data', 'e');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initPage);
   </script>
 </body>
 

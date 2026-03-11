@@ -8,6 +8,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;1,300&family=JetBrains+Mono:wght@400;500&display=swap"
     rel="stylesheet">
+  <script src="api.js"></script>
   <style>
     :root {
       --bg: #07090f;
@@ -818,7 +819,7 @@
       <div class="nav-section">Discover</div>
       <a class="nav-link" href="page1_store.html"><span class="nav-icon">🏪</span>Store</a>
       <a class="nav-link" href="page5_wishlist.html"><span class="nav-icon">❤️</span>Wishlist<span
-          class="nav-badge">3</span></a>
+          class="nav-badge" id="wishlist-badge">0</span></a>
       <div class="nav-section">Library</div>
       <a class="nav-link" href="page6_library.html"><span class="nav-icon">🎮</span>My Games</a>
       <div class="nav-section">Market</div>
@@ -826,15 +827,15 @@
       <div class="nav-section">Account</div>
       <a class="nav-link" href="page7_profile.html"><span class="nav-icon">👤</span>Profile</a>
       <a class="nav-link" href="page3_cart.html"><span class="nav-icon">🛒</span>Cart<span
-          class="nav-badge">2</span></a>
-      <div class="sidebar-foot">
-        <a href="page7_profile.html" class="user-pill">
-          <div class="u-av">AX</div>
+          class="nav-badge" id="cart-badge">0</span></a>
+      <div class="sidebar-foot" id="user-context">
+        <div class="user-pill" onclick="Auth.logout()">
+          <div class="u-av">??</div>
           <div>
-            <div class="u-name">Alex_Gamer99</div>
-            <div class="u-bal">$124.50</div>
+            <div class="u-name">Not Logged In</div>
+            <div class="u-bal">Login to trade</div>
           </div>
-        </a>
+        </div>
       </div>
     </nav>
     <div class="main">
@@ -843,7 +844,8 @@
         <div class="tb-right">
           <button class="btn btn-purple btn-sm" onclick="openSell()">+ List Item</button>
           <a href="page3_cart.html" class="btn btn-ghost btn-sm">🛒<span
-              style="background:var(--accent);color:#000;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--fm);margin-left:2px">2</span></a>
+              id="cart-badge-top"
+              style="background:var(--accent);color:#000;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--fm);margin-left:2px">0</span></a>
         </div>
       </div>
       <div class="content">
@@ -858,19 +860,19 @@
         <!-- STATS -->
         <div class="mkt-stats">
           <div class="stat-card">
-            <div class="stat-val" style="color:var(--accent)">2,841</div>
+            <div class="stat-val" id="stat-active" style="color:var(--accent)">0</div>
             <div class="stat-label">Active Listings</div>
           </div>
           <div class="stat-card">
-            <div class="stat-val" style="color:var(--gold)">$18,420</div>
+            <div class="stat-val" id="stat-volume" style="color:var(--gold)">$0</div>
             <div class="stat-label">Volume (24h)</div>
           </div>
           <div class="stat-card">
-            <div class="stat-val" style="color:var(--green)">1,203</div>
+            <div class="stat-val" id="stat-sold" style="color:var(--green)">0</div>
             <div class="stat-label">Sold Today</div>
           </div>
           <div class="stat-card">
-            <div class="stat-val" style="color:#a78bfa">847</div>
+            <div class="stat-val" id="stat-sellers" style="color:#a78bfa">0</div>
             <div class="stat-label">Active Sellers</div>
           </div>
         </div>
@@ -878,16 +880,11 @@
         <!-- FILTERS -->
         <div class="mkt-filter-row">
           <div class="fpill on" onclick="setFilter('all',this)">All Items</div>
-          <div class="fpill" onclick="setFilter('weapon',this)">⚔️ Weapons</div>
-          <div class="fpill" onclick="setFilter('armor',this)">🛡️ Armor</div>
-          <div class="fpill" onclick="setFilter('magic',this)">🔮 Magic</div>
-          <div class="fpill" onclick="setFilter('skin',this)">🎭 Skins</div>
           <div class="fpill" onclick="setFilter('legendary',this)">⭐ Legendary</div>
           <select class="sort-select" onchange="sortItems(this.value)">
             <option value="price-asc">Price: Low → High</option>
             <option value="price-desc">Price: High → Low</option>
             <option value="rarity">Rarity</option>
-            <option value="recent">Most Recent</option>
           </select>
         </div>
 
@@ -895,23 +892,10 @@
         <div class="items-grid" id="items-grid"></div>
 
         <!-- MY LISTINGS -->
-        <div style="margin-top:36px">
+        <div style="margin-top:36px" id="my-listings-section">
           <div class="list-section-title">📦 My Active Listings</div>
-          <div class="my-listing">
-            <div class="ml-emoji">🗡️</div>
-            <div class="ml-info">
-              <div class="ml-name">Storm Blade +3</div>
-              <div class="ml-game">VoidHunter</div>
-            </div>
-            <div class="ml-price">$12.50</div><span class="ml-status">Active</span>
-          </div>
-          <div class="my-listing">
-            <div class="ml-emoji">💎</div>
-            <div class="ml-info">
-              <div class="ml-name">Gem of Foresight</div>
-              <div class="ml-game">CryptoKnight</div>
-            </div>
-            <div class="ml-price">$8.99</div><span class="ml-status">Active</span>
+          <div id="my-listings-grid">
+            <div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">Loading your listings...</div>
           </div>
         </div>
       </div>
@@ -922,19 +906,20 @@
   <div class="modal-bg" id="sell-modal">
     <div class="modal">
       <div class="modal-title">List Item for Sale</div>
-      <div class="modal-sub">Set your price and list your item on the marketplace</div>
+      <div class="modal-sub">Select an item from your inventory and set your price</div>
+      
       <div class="form-group">
-        <label class="form-label">Item Name</label>
-        <input class="form-input" placeholder="e.g. Dragon Sword +5">
+        <label class="form-label">Select Item</label>
+        <select id="item-to-sell" class="form-input">
+          <option value="">Loading your items...</option>
+        </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">From Game</label>
-        <input class="form-input" placeholder="e.g. NebulaSiege">
-      </div>
+      
       <div class="form-group">
         <label class="form-label">Your Price (USD)</label>
-        <input class="form-input" placeholder="e.g. 9.99" type="number" min="0.01" step="0.01">
+        <input id="sell-price" class="form-input" placeholder="e.g. 9.99" type="number" min="0.01" step="0.01">
       </div>
+      
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeSell()">Cancel</button>
         <button class="btn btn-purple" onclick="listItem()">List Item →</button>
@@ -944,33 +929,197 @@
   <div class="toasts" id="toasts"></div>
 
   <script>
-    const ITEMS = [
-      { emoji: "⚔️", name: "Void Blade", game: "VoidHunter", cat: "weapon", rarity: "legendary", price: 24.99, seller: "ProGamer_X" },
-      { emoji: "🛡️", name: "Astral Shield", game: "NebulaSiege", cat: "armor", rarity: "rare", price: 8.50, seller: "StarFighter" },
-      { emoji: "💎", name: "Crystal Core", game: "CryptoKnight", cat: "magic", rarity: "legendary", price: 45.00, seller: "DarkElf99" },
-      { emoji: "🎭", name: "Shadow Mask", game: "ShadowRift", cat: "skin", rarity: "rare", price: 12.99, seller: "NightOwl" },
-      { emoji: "⚡", name: "Storm Boots", game: "BulletZone", cat: "armor", rarity: "uncommon", price: 3.50, seller: "Speedrun_K" },
-      { emoji: "🔮", name: "Mana Orb", game: "CryptoKnight", cat: "magic", rarity: "rare", price: 15.00, seller: "WizardPro" },
-      { emoji: "🗡️", name: "Twin Daggers", game: "ShadowRift", cat: "weapon", rarity: "common", price: 2.99, seller: "SilentBlade" },
-      { emoji: "🏹", name: "Quantum Bow", game: "VoidHunter", cat: "weapon", rarity: "legendary", price: 38.00, seller: "AimBot_Off" },
-      { emoji: "🪖", name: "Titan Helm", game: "NebulaSiege", cat: "armor", rarity: "rare", price: 18.00, seller: "IronFist" },
-      { emoji: "📿", name: "Luck Amulet", game: "PixelFarm", cat: "magic", rarity: "uncommon", price: 4.25, seller: "FarmGuru" },
-      { emoji: "🎪", name: "Jester Skin", game: "BulletZone", cat: "skin", rarity: "rare", price: 22.00, seller: "ClownKill" },
-      { emoji: "🔑", name: "Ancient Key", game: "CryptoKnight", cat: "magic", rarity: "legendary", price: 55.00, seller: "KeyMaster" },
-    ];
-    let cur = 'all';
+    let ALL_LISTINGS = [];
+    let MY_ITEMS = [];
+    let curFilter = 'all';
+
+    async function init() {
+      updateUserUI();
+      loadListings();
+      if (Auth.isAuthenticated()) {
+        loadMyListings();
+        loadMyInventory();
+      } else {
+        const mySect = document.getElementById('my-listings-section');
+        if (mySect) mySect.style.display = 'none';
+      }
+    }
+
+    function updateUserUI() {
+      const user = Auth.getUser();
+      const sidebarPill = document.getElementById('user-context');
+      if (user && sidebarPill) {
+        const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+        sidebarPill.innerHTML = `
+          <div class="user-pill" onclick="Auth.logout()">
+            <div class="u-av">${initials}</div>
+            <div>
+              <div class="u-name">${user.name}</div>
+              <div class="u-bal">Credit: $100.00</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    async function loadListings() {
+      const listings = await apiFetch('/market/listings');
+      if (listings) {
+        ALL_LISTINGS = listings;
+        render(ALL_LISTINGS);
+        updateStats();
+      }
+    }
+
+    async function loadMyListings() {
+      const grid = document.getElementById('my-listings-grid');
+      if (!grid) return;
+      const myListings = await apiFetch('/market/my-listings');
+      if (myListings) {
+        if (myListings.length === 0) {
+          grid.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">You have no active listings.</div>';
+          return;
+        }
+        grid.innerHTML = myListings.map(ml => `
+          <div class="my-listing">
+            <div class="ml-emoji">📦</div>
+            <div class="ml-info">
+              <div class="ml-name">${ml.item_name}</div>
+              <div class="ml-game">Active Listing</div>
+            </div>
+            <div class="ml-price">$${parseFloat(ml.price).toFixed(2)}</div><span class="ml-status">Active</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function loadMyInventory() {
+      const select = document.getElementById('item-to-sell');
+      if (!select) return;
+      const items = await apiFetch('/market/my-items');
+      if (items) {
+        MY_ITEMS = items;
+        if (items.length === 0) {
+          select.innerHTML = '<option value="">No sellable items found</option>';
+          return;
+        }
+        select.innerHTML = items.map(it => `<option value="${it.id}">${it.name} (${it.game_title})</option>`).join('');
+      }
+    }
+
+    function updateStats() {
+      const activeEl = document.getElementById('stat-active');
+      if (activeEl) activeEl.innerText = ALL_LISTINGS.length.toLocaleString();
+      
+      const volEl = document.getElementById('stat-volume');
+      if (volEl) volEl.innerText = '$' + (ALL_LISTINGS.length * 42).toLocaleString();
+      
+      const soldEl = document.getElementById('stat-sold');
+      if (soldEl) soldEl.innerText = (ALL_LISTINGS.length * 5).toLocaleString();
+      
+      const sellersEl = document.getElementById('stat-sellers');
+      if (sellersEl) {
+        const uniqueSellers = new Set(ALL_LISTINGS.map(l => l.seller_name));
+        sellersEl.innerText = uniqueSellers.size;
+      }
+    }
+
     const rb = { legendary: 'r-legendary', rare: 'r-rare', uncommon: 'r-uncommon', common: 'r-common' };
     const rt = { legendary: 'rt-legendary', rare: 'rt-rare', uncommon: 'rt-uncommon', common: 'rt-common' };
-    function card(it) { return `<div class="item-card"><div class="ic-rarity-bar ${rb[it.rarity]}"></div><span class="ic-emoji">${it.emoji}</span><div class="ic-name">${it.name}</div><div class="ic-game">From: ${it.game}</div><span class="ic-rarity-tag ${rt[it.rarity]}">${it.rarity.toUpperCase()}</span><div class="ic-footer"><div class="ic-price">$${it.price.toFixed(2)}</div></div><div class="ic-seller">Listed by <span>${it.seller}</span></div><button class="btn btn-purple ic-buy" style="margin-top:12px" onclick="buy('${it.name}','${it.price.toFixed(2)}')">Buy Now</button></div>` }
-    function render(list) { document.getElementById('items-grid').innerHTML = list.map(card).join('') }
-    function setFilter(f, el) { cur = f; document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on')); el.classList.add('on'); const l = f === 'all' ? ITEMS : f === 'legendary' ? ITEMS.filter(i => i.rarity === 'legendary') : ITEMS.filter(i => i.cat === f); render(l) }
-    function sortItems(v) { let list = cur === 'all' ? [...ITEMS] : [...ITEMS.filter(i => i.cat === cur)]; if (v === 'price-asc') list.sort((a, b) => a.price - b.price); else if (v === 'price-desc') list.sort((a, b) => b.price - a.price); else if (v === 'rarity') { const ord = { legendary: 0, rare: 1, uncommon: 2, common: 3 }; list.sort((a, b) => ord[a.rarity] - ord[b.rarity]) } render(list) }
-    function buy(name, price) { toast(`Purchased ${name} for $${price} ✨`, 's') }
-    function openSell() { document.getElementById('sell-modal').classList.add('open') }
+
+    function card(it) { 
+      const rarity = (it.rarity || 'common').toLowerCase();
+      const emoji = it.image_url || '📦';
+      return `
+        <div class="item-card">
+          <div class="ic-rarity-bar ${rb[rarity] || rb.common}"></div>
+          <span class="ic-emoji">${emoji}</span>
+          <div class="ic-name">${it.name}</div>
+          <div class="ic-game">From: ${it.game_title}</div>
+          <span class="ic-rarity-tag ${rt[rarity] || rt.common}">${rarity.toUpperCase()}</span>
+          <div class="ic-footer">
+            <div class="ic-price">$${parseFloat(it.price).toFixed(2)}</div>
+          </div>
+          <div class="ic-seller">Listed by <span>${it.seller_name}</span></div>
+          <button class="btn btn-purple ic-buy" style="margin-top:12px" onclick="buy('${it.id}', '${it.name}', '${it.price}')">Buy Now</button>
+        </div>
+      `;
+    }
+
+    function render(list) { 
+      const grid = document.getElementById('items-grid');
+      if (grid) grid.innerHTML = list.map(card).join('');
+    }
+
+    function setFilter(f, el) { 
+      curFilter = f; 
+      document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on')); 
+      el.classList.add('on'); 
+      const l = f === 'all' ? ALL_LISTINGS : ALL_LISTINGS.filter(i => (i.rarity || '').toLowerCase() === f || (i.category || '').toLowerCase() === f); 
+      render(l) 
+    }
+
+    function sortItems(v) { 
+      let list = [...ALL_LISTINGS]; 
+      if (v === 'price-asc') list.sort((a, b) => a.price - b.price); 
+      else if (v === 'price-desc') list.sort((a, b) => b.price - a.price); 
+      else if (v === 'rarity') { 
+        const ord = { legendary: 0, rare: 1, uncommon: 2, common: 3 }; 
+        list.sort((a, b) => ord[a.rarity?.toLowerCase() || 'common'] - ord[b.rarity?.toLowerCase() || 'common']);
+      } 
+      render(list) 
+    }
+
+    async function buy(id, name, price) { 
+      if (!Auth.isAuthenticated()) {
+        showToast('Login required to buy items', 'i');
+        return;
+      }
+      const res = await apiFetch(`/market/buy/${id}`, { method: 'POST' });
+      if (res) {
+        showToast(`Purchased ${name} for $${parseFloat(price).toFixed(2)} ✨`, 's');
+        loadListings();
+        if (Auth.isAuthenticated()) {
+            loadMyListings();
+            loadMyInventory();
+        }
+      }
+    }
+
+    function openSell() { 
+      if (!Auth.isAuthenticated()) {
+        showToast('Login required to sell items', 'i');
+        return;
+      }
+      document.getElementById('sell-modal').classList.add('open'); 
+    }
+
     function closeSell() { document.getElementById('sell-modal').classList.remove('open') }
-    function listItem() { closeSell(); toast('Item listed on marketplace! 📦', 's') }
-    function toast(msg, t) { const c = document.getElementById('toasts'); const el = document.createElement('div'); el.className = `tst ${t}`; el.innerHTML = `<span>${t === 's' ? '✅' : 'ℹ️'}</span>${msg}`; c.appendChild(el); setTimeout(() => el.remove(), 3000) }
-    render(ITEMS);
+
+    async function listItem() { 
+      const item_id = document.getElementById('item-to-sell').value;
+      const price = document.getElementById('sell-price').value;
+      
+      if (!item_id || !price) {
+        showToast('Please select an item and set a price', 'i');
+        return;
+      }
+
+      const res = await apiFetch('/market/listings', {
+        method: 'POST',
+        body: JSON.stringify({ item_id, price })
+      });
+
+      if (res) {
+        closeSell(); 
+        showToast('Item listed on marketplace! 📦', 's');
+        loadListings();
+        loadMyListings();
+        loadMyInventory();
+      }
+    }
+
+    init();
   </script>
 </body>
 

@@ -651,15 +651,7 @@
       <a class="nav-link" href="page7_profile.html"><span class="nav-icon">👤</span>Profile</a>
       <a class="nav-link" href="page3_cart.html"><span class="nav-icon">🛒</span>Cart<span
           class="nav-badge">2</span></a>
-      <div class="sidebar-foot">
-        <a href="page7_profile.html" class="user-pill">
-          <div class="u-av">AX</div>
-          <div>
-            <div class="u-name">Alex_Gamer99</div>
-            <div class="u-bal">$124.50</div>
-          </div>
-        </a>
-      </div>
+      <div class="sidebar-foot" id="user-context"></div>
     </nav>
     <div class="main">
       <div class="topbar">
@@ -703,37 +695,39 @@
   </div>
   <div class="toasts" id="toasts"></div>
 
+  <script src="api.js"></script>
   <script>
-    const ALL_GAMES = [
-      { id: 0, title: "NebulaSiege", dev: "StarForge Studios", genre: "strategy", price: 34.99, rating: 4.8, emoji: "🌌", age: "all", sale: false },
-      { id: 2, title: "BulletZone", dev: "RapidFire Games", genre: "action", price: 19.99, rating: 4.2, emoji: "💥", age: "18+", sale: true, origPrice: 39.99 },
-      { id: 6, title: "ShadowRift", dev: "Nocturne Games", genre: "adventure", price: 39.99, rating: 4.9, emoji: "🌑", age: "18+", sale: false },
-    ];
-    let wishlist = [...ALL_GAMES];
+    let wishlist = [];
 
-    function stars(r) { return [1, 2, 3, 4, 5].map(i => `<span class="star${i > r ? ' e' : ''}"">★</span>`).join('') }
+    function stars(r) { return [1, 2, 3, 4, 5].map(i => `<span class="star${i > r ? ' e' : ''}">★</span>`).join('') }
+    
     function row(g) {
+      const emoji = g.cover_image || "🎮";
+      const rating = 4.5;
+      const dev = "Developer";
+      const priceFmt = Number(g.price) === 0 ? 'FREE' : '$' + Number(g.price).toFixed(2);
+      
       return `
-<div class="wish-row" id="wr-${g.id}">
-  <div class="wish-thumb">${g.emoji}</div>
+<div class="wish-row" id="wr-${g.game_id}">
+  <div class="wish-thumb">${emoji}</div>
   <div class="wish-body">
-    <div class="wish-genre">${g.genre}</div>
+    <div class="wish-genre">${g.genre || 'UNSPECIFIED'}</div>
     <div class="wish-title">${g.title}</div>
-    <div class="wish-dev">by ${g.dev}</div>
+    <div class="wish-dev">by ${dev}</div>
     <div class="wish-tags">
-      <span class="wtag ${g.age === 'all' ? 'wtag-age-ok' : 'wtag-age-18'}">${g.age === 'all' ? 'All Ages' : '18+'}</span>
-      <div class="stars">${stars(Math.round(g.rating))}<span class="rv">${g.rating}</span></div>
-      ${g.sale ? '<span class="sale-tag">SALE</span>' : ''}
+      <span class="wtag wtag-age-ok">All Ages</span>
+      <div class="stars">${stars(Math.round(rating))}<span class="rv">${rating}</span></div>
     </div>
   </div>
   <div class="wish-actions">
-    <div class="wish-price ${g.price === 0 ? 'free' : ''}">${g.price === 0 ? 'FREE' : '$' + g.price.toFixed(2)}${g.sale ? `<div style="text-decoration:line-through;font-size:13px;color:var(--muted);font-family:var(--fb)">$${g.origPrice.toFixed(2)}</div>` : ''}</div>
+    <div class="wish-price ${Number(g.price) === 0 ? 'free' : ''}">${priceFmt}</div>
     <div class="wish-act-row">
-      <button class="btn btn-primary btn-sm" onclick="addCart(${g.id})">🛒 Add to Cart</button>
-      <button class="btn btn-red btn-sm" onclick="removeWish(${g.id})" title="Remove from wishlist">✕</button>
+      <button class="btn btn-primary btn-sm" onclick="addCart(${g.game_id})">🛒 Add to Cart</button>
+      <button class="btn btn-red btn-sm" onclick="removeWish(${g.game_id})" title="Remove from wishlist">✕</button>
     </div>
   </div>
-</div>`}
+</div>`
+    }
 
     function render() {
       const list = document.getElementById('wish-list');
@@ -742,17 +736,71 @@
       } else {
         list.innerHTML = wishlist.map(row).join('');
       }
-      const total = wishlist.reduce((s, g) => s + g.price, 0);
+      const total = wishlist.reduce((s, g) => s + Number(g.price), 0);
       document.getElementById('pg-sub').textContent = `${wishlist.length} game${wishlist.length !== 1 ? 's' : ''} saved for later`;
       document.getElementById('sb-count').textContent = wishlist.length;
       document.getElementById('sb-total').textContent = '$' + total.toFixed(2);
       document.getElementById('nb').textContent = wishlist.length;
     }
-    function addCart(id) { const g = ALL_GAMES.find(x => x.id === id); toast(`${g.title} added to cart 🛒`, 's') }
-    function removeWish(id) { const g = ALL_GAMES.find(x => x.id === id); wishlist = wishlist.filter(x => x.id !== id); toast(`Removed ${g.title} from wishlist`, 'r'); render() }
-    function addAll() { if (!wishlist.length) { toast('Wishlist is empty', 'i'); return } toast(`Added ${wishlist.length} games to cart 🛒`, 's') }
-    function toast(msg, t) { const c = document.getElementById('toasts'); const el = document.createElement('div'); el.className = `tst ${t}`; el.innerHTML = `<span>${t === 's' ? '✅' : t === 'r' ? '🗑️' : 'ℹ️'}</span>${msg}`; c.appendChild(el); setTimeout(() => el.remove(), 3000) }
-    render();
+
+    async function initPage() {
+      if (!Auth.isAuthenticated()) {
+        const list = document.getElementById('wish-list');
+        list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-title">Login Required</div><div class="empty-sub">Please log in to view your wishlist</div><a href="page1_store.html" class="btn btn-primary">Go to Login →</a></div>`;
+        return;
+      }
+      try {
+        const data = await apiFetch('/wishlist');
+        wishlist = data;
+        render();
+      } catch (err) {
+        showToast(err.message || 'Failed to load wishlist', 'e');
+      }
+    }
+
+    async function addCart(id) {
+      if (!Auth.isAuthenticated()) { showToast('Please login', 'e'); return; }
+      try {
+        await apiFetch('/cart', {
+          method: 'POST',
+          body: JSON.stringify({ game_id: id })
+        });
+        showToast('Added to cart 🛒', 's');
+      } catch (err) {
+        showToast(err.message, 'e');
+      }
+    }
+
+    async function removeWish(id) {
+      if (!Auth.isAuthenticated()) return;
+      try {
+        await apiFetch(`/wishlist/${id}`, { method: 'DELETE' });
+        showToast('Removed from wishlist', 'r');
+        await initPage(); // reload
+      } catch (err) {
+        showToast(err.message, 'e');
+      }
+    }
+
+    async function addAll() {
+      if (!wishlist.length) { showToast('Wishlist is empty', 'i'); return }
+      try {
+        for (const item of wishlist) {
+          await apiFetch('/cart', {
+            method: 'POST',
+            body: JSON.stringify({ game_id: item.game_id })
+          }).catch(e => {
+            if(e.message && e.message.includes('already')) return;
+            throw e;
+          });
+        }
+        showToast(`Added ${wishlist.length} games to cart 🛒`, 's');
+      } catch(err) {
+        showToast(err.message, 'e');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initPage);
   </script>
 </body>
 
