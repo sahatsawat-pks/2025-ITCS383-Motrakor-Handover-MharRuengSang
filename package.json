@@ -2,7 +2,7 @@
   "name": "motrakor-vercel",
   "version": "1.0.0",
   "engines": {
-    "node": "18.x"
+    "node": "24.x"
   },
   "scripts": {
     "start": "node Implementations/steamjek-backend/server.js"
