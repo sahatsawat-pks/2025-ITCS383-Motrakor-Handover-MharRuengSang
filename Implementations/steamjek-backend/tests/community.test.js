@@ -8,6 +8,8 @@ let gameId;
 let threadId;
 
 beforeAll(async () => {
+  // Clean up
+  await pool.query("DELETE FROM users WHERE email = 'com@test.com'");
   // Create test user
   const userRes = await pool.query(
     "INSERT INTO users (name, email, password, address, balance) VALUES ('Com Test', 'com@test.com', 'hash', 'Addr', 100) RETURNING id"
