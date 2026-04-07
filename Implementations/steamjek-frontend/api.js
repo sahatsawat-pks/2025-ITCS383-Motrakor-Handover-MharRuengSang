@@ -6,20 +6,20 @@ const API_BASE_URL = isLocalhost ? 'http://localhost:3000/api' : '/api';
 async function apiFetch(endpoint, options = {}) {
   const token = localStorage.getItem('steamjek_token');
   
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+  const customHeaders = options.headers || {};
+  const headers = Object.assign({
+    'Content-Type': 'application/json'
+  }, customHeaders);
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    const fetchOptions = Object.assign({}, options);
+    fetchOptions.headers = headers;
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
 
     const data = await response.json();
 
