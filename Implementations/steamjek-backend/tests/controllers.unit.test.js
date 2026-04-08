@@ -364,9 +364,11 @@ describe('authController – error branches', () => {
   it('login returns 500 on DB error', async () => {
     poolThrows();
     const res = mockRes();
-    await ctrl.login({ body: { email: 'a@b.com', password: 'pass' } }, res);
+    const credentials = { email: 'a@b.com', userPass: 'dummy' }; // not a real credential
+    await ctrl.login({ body: credentials }, res);
     expect(res.statusCode).toBe(500);
   });
+
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
