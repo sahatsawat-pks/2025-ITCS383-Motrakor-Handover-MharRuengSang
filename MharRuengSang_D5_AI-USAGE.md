@@ -332,3 +332,80 @@ The scripts have been effectively pruned and the launch flow is structured perfe
 - **Total Prompts:** ~10 prompts covering architecture, backend, frontend, shell execution, and verification.
 - **Time Saved:** Estimated 10-12 hours constructing REST APIs, HTML5 layouts, and complex multi-threaded stack initialization pipelines manually.
 - **Quality Rating:** High - Application structure is robust and launch metrics are clean with minimal overhead.
+
+---
+
+## Entry #4: Achieving 98% Test Coverage & Mitigating SonarQube Code Smells
+
+### Date & Time
+
+2026-04-08, 11:30 UTC+7
+
+### Task Description
+
+The repository reported 0.0% code coverage and failed its SonarCloud Quality Gate despite having an exhaustive Jest test suite. In addition, the testing suite encountered connection refused errors (ECONNREFUSED) when running locally, resulting in hanging asynchronous TCP sockets ("open handles"). The goal was to intercept and resolve database driver inconsistencies, fix coverage reporting, and eliminate all remaining SonarQube HTML/CSS duplicate code smells.
+
+### Prompts Used
+
+**Initial Prompts:**
+
+```text
+- "Check coverage and make sure sonar cloud is ok for coverage"
+- "0 passing, 0 failing, 0 total tests? My Jest suite isn't working locally."
+- "Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?"
+- "I don't want exclusions for my CPD duplication."
+- "Resolve the text contrast accessibility issues and uncaught rollback exceptions logged in SonarQube."
+```
+
+### AI Output Summary
+
+The AI agent analyzed the tests and database routing logic, then generated the following solutions:
+
+1. **Database Dynamic Driver Loading**:
+   - Swapped out the pure `@neondatabase/serverless` WebSocket driver for the standard `pg.Pool` TCP driver *specifically* when `process.env.DB_HOST === 'localhost'` or `NODE_ENV === 'test'`, natively resolving the local connection refused failures.
+2. **Open Handles Fix (Jest Lifecycles)**:
+   - Reconfigured `.github/workflows/build.yml` to explicitly use the `db/seed_data.sql` script so migrations align identically with test expectations.
+   - Refactored `db/index.js` connection verification and added explicit `await pool.end()` and `client.release()` lifecycle hooks to `tests/setup.js` to ensure Jest process workers terminate with Exit Code 0 immediately upon completion.
+3. **SonarQube Coverage & Code Smell Fixes**:
+   - Manually merged duplicate and redundant HTML DOM selectors and generalized CSS classes (`.btn-gold`, layout properties) within the frontend files to bypass CPD copy-paste errors without using forced exclusions.
+   - Repaired Uncaught Rollback errors in `marketController.js` and Top-Level-Await IIFE warnings.
+   - Improved foreground contrast variables to cleanly resolve accessibility guidelines in `page4_marketplace.html` and `page7_profile.html`.
+
+### What Was Accepted ✅
+
+#### Testing Architecture
+
+- ✅ **Dynamic DB Contexts** - Running native `pg` for GitHub actions and local tests while preserving `ws` wrappers for Vercel production edge-functions.
+- ✅ **Teardown Hooks** - Closing orphaned TCPWRAP socket pools via `afterAll()` drastically cleans up the GitHub Actions CI environment.
+
+#### Static Code Quality 
+
+- ✅ **SonarQube Remediation** - Remediating contrast styling errors and rewriting try-catch exceptions blocks ensured the project cleanly passes all Maintainability and Reliability Quality Gates.
+
+### What Was Rejected/Modified ❌
+
+#### Forced Exclusion Bypasses ⚠️
+
+- **Rejected Logic:** Modifying `sonar-project.properties` with `sonar.cpd.exclusions` to ignore the testing files and UI templates completely.
+- **Modification Required:** The user commanded "I don't want exclusions." Thus, the AI manually edited the exact overlapping CSS pseudo-classes and DOM grids natively in the `shared.css` file instead of manipulating the analysis parser to ignore them.
+
+### Verification Methods
+
+#### Workflow Validation ✓
+
+**Verification Method:** Running test scripts securely and Sonar scanner terminal execution.
+
+- [x] Verified `npm run test:coverage` completes dynamically with `Exit Code 0` executing 180 fully green tests.
+- [x] Inspected GitHub Action CI log steps resolving Vercel build dependencies (added `ws` globally into the `package.json`).
+- [x] Ran `sonar-scanner` locally to ensure the SonarQube Web Dashboard cleared all high-priority maintainability flaws and duplicated lines warnings cleanly.
+
+### Final Decision & Rationale
+
+#### ✅ Complete CI/CD Testing Framework Accepted
+
+The test coverage mappings have been perfectly bridged with Jest's `lcov.info` resolving 0% coverage traps into a consistent 98.47% coverage success. The integration is **ACCEPTED**.
+
+**Rationale:**
+
+1. **Maintainability Metrics Sustained** - Hard-coding fixes rather than globally excluding paths accurately represents the repository's true code health.
+2. **Edge Compatibility Maintained** - Retaining Neon Serverless implementations parallel to standard PostgreSQL pools guarantees tests accurately replicate the underlying logic without sacrificing deployment edge-function compatibility globally.
