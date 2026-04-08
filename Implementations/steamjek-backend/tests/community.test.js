@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../server');
 const pool = require('../db');
+const { mintJwt, expectAuthRequired, authGet, authPost } = require('./testHelpers');
 
 let token;
 let mockUserId;
@@ -8,22 +9,21 @@ let gameId;
 let threadId;
 
 beforeAll(async () => {
-  // Clean up
-  await pool.query("DELETE FROM users WHERE email = 'com@test.com'");
-  // Create test user
+  const existing = await pool.query("SELECT id FROM users WHERE email = 'com@test.com'");
+  if (existing.rows.length > 0) {
+    const prevId = existing.rows[0].id;
+    await pool.query("DELETE FROM thread_likes WHERE thread_id IN (SELECT id FROM threads WHERE user_id=$1)", [prevId]);
+    await pool.query("DELETE FROM thread_replies WHERE user_id=$1", [prevId]);
+    await pool.query("DELETE FROM threads WHERE user_id=$1", [prevId]);
+    await pool.query("DELETE FROM users WHERE id=$1", [prevId]);
+  }
+
   const userRes = await pool.query(
     "INSERT INTO users (name, email, password, address, balance) VALUES ('Com Test', 'com@test.com', 'hash', 'Addr', 100) RETURNING id"
   );
   mockUserId = userRes.rows[0].id;
+  token = mintJwt(mockUserId, 'com@test.com', 'user');
 
-  const jwt = require('jsonwebtoken');
-  token = jwt.sign(
-    { id: mockUserId, email: 'com@test.com', role: 'user' },
-    process.env.JWT_SECRET || 'test_secret_123',
-    { expiresIn: '1h' }
-  );
-
-  // Create a test game
   const gameRes = await pool.query(
     "INSERT INTO games (title, description, genre, price, is_approved) VALUES ('Community Test Game','Desc','Action',0,true) RETURNING id"
   );
@@ -78,52 +78,36 @@ describe('Community Endpoints', () => {
     const res = await request(app)
       .post('/api/community/threads')
       .send({ game_id: gameId, title: 'A', content: 'B', tag: 'Discussion' });
-    expect([401, 403]).toContain(res.statusCode);
+    expectAuthRequired(res);
   });
 
   it('POST /api/community/threads should return 400 when field missing', async () => {
-    const res = await request(app)
-      .post('/api/community/threads')
-      .set('Authorization', 'Bearer ' + token)
-      .send({ game_id: gameId, title: 'Only title' }); // missing content
+    const res = await authPost(app, '/api/community/threads', token, { game_id: gameId, title: 'Only title' });
     expect(res.statusCode).toBe(400);
     expect(res.body.message).toMatch(/required/i);
   });
 
   it('POST /api/community/threads should create thread with valid tag', async () => {
-    const res = await request(app)
-      .post('/api/community/threads')
-      .set('Authorization', 'Bearer ' + token)
-      .send({ game_id: gameId, title: 'Test Thread', content: 'Content', tag: 'Discussion' });
+    const res = await authPost(app, '/api/community/threads', token, { game_id: gameId, title: 'Test Thread', content: 'Content', tag: 'Discussion' });
     expect(res.statusCode).toBe(201);
     expect(res.body.title).toBe('Test Thread');
     threadId = res.body.id;
   });
 
   it('POST /api/community/threads should default invalid tag to Discussion', async () => {
-    const res = await request(app)
-      .post('/api/community/threads')
-      .set('Authorization', 'Bearer ' + token)
-      .send({ game_id: gameId, title: 'Invalid Tag Thread', content: 'Content', tag: 'InvalidTag' });
+    const res = await authPost(app, '/api/community/threads', token, { game_id: gameId, title: 'Invalid Tag Thread', content: 'Content', tag: 'InvalidTag' });
     expect(res.statusCode).toBe(201);
     expect(res.body.tag).toBe('Discussion');
   });
 
-  // Other valid tags
   it('POST /api/community/threads with Guide tag', async () => {
-    const res = await request(app)
-      .post('/api/community/threads')
-      .set('Authorization', 'Bearer ' + token)
-      .send({ game_id: gameId, title: 'Guide Thread', content: 'Guide content', tag: 'Guide' });
+    const res = await authPost(app, '/api/community/threads', token, { game_id: gameId, title: 'Guide Thread', content: 'Guide content', tag: 'Guide' });
     expect(res.statusCode).toBe(201);
     expect(res.body.tag).toBe('Guide');
   });
 
   it('POST /api/community/threads with Bug Report tag', async () => {
-    const res = await request(app)
-      .post('/api/community/threads')
-      .set('Authorization', 'Bearer ' + token)
-      .send({ game_id: gameId, title: 'Bug Thread', content: 'Bug content', tag: 'Bug Report' });
+    const res = await authPost(app, '/api/community/threads', token, { game_id: gameId, title: 'Bug Thread', content: 'Bug content', tag: 'Bug Report' });
     expect(res.statusCode).toBe(201);
     expect(res.body.tag).toBe('Bug Report');
   });
@@ -145,27 +129,22 @@ describe('Community Endpoints', () => {
   // ── POST /threads/:id/like ──────────────────────────────────────────────────
 
   it('POST /api/community/threads/:id/like should like a thread', async () => {
-    const res = await request(app)
-      .post('/api/community/threads/' + threadId + '/like')
-      .set('Authorization', 'Bearer ' + token);
+    const res = await authPost(app, '/api/community/threads/' + threadId + '/like', token);
     expect(res.statusCode).toBe(200);
     expect(res.body.message).toMatch(/liked/i);
     expect(res.body.liked).toBe(true);
   });
 
   it('POST /api/community/threads/:id/like should toggle unlike', async () => {
-    const res = await request(app)
-      .post('/api/community/threads/' + threadId + '/like')
-      .set('Authorization', 'Bearer ' + token);
+    const res = await authPost(app, '/api/community/threads/' + threadId + '/like', token);
     expect(res.statusCode).toBe(200);
     expect(res.body.message).toMatch(/unliked/i);
     expect(res.body.liked).toBe(false);
   });
 
   it('POST /api/community/threads/:id/like should require auth', async () => {
-    const res = await request(app)
-      .post('/api/community/threads/' + threadId + '/like');
-    expect([401, 403]).toContain(res.statusCode);
+    const res = await request(app).post('/api/community/threads/' + threadId + '/like');
+    expectAuthRequired(res);
   });
 
   // ── POST /threads/:id/replies ───────────────────────────────────────────────
@@ -174,32 +153,23 @@ describe('Community Endpoints', () => {
     const res = await request(app)
       .post('/api/community/threads/' + threadId + '/replies')
       .send({ content: 'A reply' });
-    expect([401, 403]).toContain(res.statusCode);
+    expectAuthRequired(res);
   });
 
   it('POST /api/community/threads/:id/replies should return 400 when content missing', async () => {
-    const res = await request(app)
-      .post('/api/community/threads/' + threadId + '/replies')
-      .set('Authorization', 'Bearer ' + token)
-      .send({});
+    const res = await authPost(app, '/api/community/threads/' + threadId + '/replies', token, {});
     expect(res.statusCode).toBe(400);
     expect(res.body.message).toBe('content is required');
   });
 
   it('POST /api/community/threads/:id/replies should return 404 for non-existent thread', async () => {
-    const res = await request(app)
-      .post('/api/community/threads/99999999/replies')
-      .set('Authorization', 'Bearer ' + token)
-      .send({ content: 'Reply to nowhere' });
+    const res = await authPost(app, '/api/community/threads/99999999/replies', token, { content: 'Reply to nowhere' });
     expect(res.statusCode).toBe(404);
     expect(res.body.message).toBe('Thread not found');
   });
 
   it('POST /api/community/threads/:id/replies should add a reply', async () => {
-    const res = await request(app)
-      .post('/api/community/threads/' + threadId + '/replies')
-      .set('Authorization', 'Bearer ' + token)
-      .send({ content: 'Test reply' });
+    const res = await authPost(app, '/api/community/threads/' + threadId + '/replies', token, { content: 'Test reply' });
     expect(res.statusCode).toBe(201);
     expect(res.body.content).toBe('Test reply');
   });
@@ -207,8 +177,7 @@ describe('Community Endpoints', () => {
   // ── GET /threads/:id/replies ────────────────────────────────────────────────
 
   it('GET /api/community/threads/:id/replies should get replies', async () => {
-    const res = await request(app)
-      .get('/api/community/threads/' + threadId + '/replies');
+    const res = await request(app).get('/api/community/threads/' + threadId + '/replies');
     expect(res.statusCode).toBe(200);
     expect(res.body.length).toBeGreaterThan(0);
   });
