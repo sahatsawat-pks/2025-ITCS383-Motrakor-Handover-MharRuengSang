@@ -1,4 +1,4 @@
-# SonarQube Quality Report - MharRuengSang
+# SteamJek - SonarQube Quality Report
 
 ## Before (Initial Assessment)
 ![SonarQube](Image/SonarQube.png)
