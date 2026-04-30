@@ -69,7 +69,7 @@ class ApiService {
   }
 
   // --- Games ---
-  static Future<Map<String, dynamic>> getGames() async {
+  static Future<List<dynamic>> getGames() async {
     final response = await http.get(Uri.parse('$baseUrl/games'));
     return jsonDecode(response.body);
   }
@@ -80,7 +80,7 @@ class ApiService {
   }
 
   // --- Cart ---
-  static Future<Map<String, dynamic>> getCart() async {
+  static Future<List<dynamic>> getCart() async {
     final response = await http.get(
       Uri.parse('$baseUrl/cart'),
       headers: await getHeaders(true),
@@ -92,7 +92,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/cart'),
       headers: await getHeaders(true),
-      body: jsonEncode({'gameId': gameId}),
+      body: jsonEncode({'game_id': gameId}),
     );
     return jsonDecode(response.body);
   }
@@ -106,7 +106,7 @@ class ApiService {
   }
 
   // --- Purchases ---
-  static Future<Map<String, dynamic>> getLibrary() async {
+  static Future<List<dynamic>> getLibrary() async {
     final response = await http.get(
       Uri.parse('$baseUrl/purchases'),
       headers: await getHeaders(true),
@@ -134,7 +134,7 @@ class ApiService {
   }
 
   // --- Wishlist ---
-  static Future<Map<String, dynamic>> getWishlist() async {
+  static Future<List<dynamic>> getWishlist() async {
     final response = await http.get(
       Uri.parse('$baseUrl/wishlist'),
       headers: await getHeaders(true),
@@ -146,7 +146,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/wishlist'),
       headers: await getHeaders(true),
-      body: jsonEncode({'gameId': gameId}),
+      body: jsonEncode({'game_id': gameId}),
     );
     return jsonDecode(response.body);
   }
@@ -160,7 +160,7 @@ class ApiService {
   }
 
   // --- Marketplace ---
-  static Future<Map<String, dynamic>> getListings() async {
+  static Future<List<dynamic>> getListings() async {
     final response = await http.get(
       Uri.parse('$baseUrl/market/listings'),
       headers: await getHeaders(true),
@@ -168,7 +168,7 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> getMyItems() async {
+  static Future<List<dynamic>> getMyItems() async {
     final response = await http.get(
       Uri.parse('$baseUrl/market/my-items'),
       headers: await getHeaders(true),
@@ -185,7 +185,7 @@ class ApiService {
       Uri.parse('$baseUrl/market/listings'),
       headers: await getHeaders(true),
       body: jsonEncode({
-        'itemTypeId': itemTypeId,
+        'item_type_id': itemTypeId,
         'quantity': quantity,
         'price': price,
       }),
@@ -226,7 +226,7 @@ class ApiService {
   }
 
   // --- Ratings & Reviews ---
-  static Future<Map<String, dynamic>> getGameRatings(int gameId) async {
+  static Future<List<dynamic>> getGameRatings(int gameId) async {
     final response = await http.get(Uri.parse('$baseUrl/ratings/$gameId'));
     return jsonDecode(response.body);
   }
@@ -239,7 +239,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/ratings/$gameId'),
       headers: await getHeaders(true),
-      body: jsonEncode({'rating': rating, 'reviewText': reviewText}),
+      body: jsonEncode({'rating': rating, 'review': reviewText}),
     );
     return jsonDecode(response.body);
   }
@@ -253,7 +253,7 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> getRewards() async {
+  static Future<List<dynamic>> getRewards() async {
     final response = await http.get(
       Uri.parse('$baseUrl/points/rewards'),
       headers: await getHeaders(true),
@@ -286,7 +286,7 @@ class ApiService {
   }
 
   // --- Community ---
-  static Future<Map<String, dynamic>> getThreads({
+  static Future<List<dynamic>> getThreads({
     int? gameId,
     String? q,
     String? tag,

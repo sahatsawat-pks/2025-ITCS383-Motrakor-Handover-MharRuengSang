@@ -481,7 +481,7 @@
     let elements;
     
     // --- AUTH FLOW ---
-    function Auth.showModal() { document.getElementById('auth-overlay').style.display = 'flex'; }
+    function openAuthModal() { document.getElementById('auth-overlay').style.display = 'flex'; }
     function closeAuthModal() { document.getElementById('auth-overlay').style.display = 'none'; }
     
     function switchAuthTab(tab) {
@@ -591,7 +591,7 @@
         <span class="ci-genre">${(g.genre || 'Unspecified').toUpperCase()}</span>
       </div>
       <div class="ci-price">${Number(g.price) === 0 ? 'FREE' : '$' + Number(g.price).toFixed(2)}</div>
-      <button class="ci-remove" onclick="remove(${g.id})" title="Remove">✕</button>
+      <button class="ci-remove" onclick="remove(${g.game_id})" title="Remove">✕</button>
     </div>`).join('');
     
       rows.innerHTML = cartGames.map(g => `<div class="oc-row"><span>${g.title}</span><span>${Number(g.price) === 0 ? 'FREE' : '$' + Number(g.price).toFixed(2)}</span></div>`).join('');
@@ -602,7 +602,7 @@
         try {
             const res = await apiFetch(`/cart/${id}`, { method: 'DELETE' });
             if (res) {
-                cartGames = cartGames.filter(g => g.id !== id);
+                cartGames = cartGames.filter(g => g.game_id !== id);
                 renderCart();
                 updateBadges(); // Sync global
                 showToast('Item removed from cart 🗑', 'i');
@@ -708,7 +708,7 @@
                 document.getElementById('submit-button').disabled = false;
             } else if (res && res.clientSecret) {
                 isFreeState = false;
-                stripe = Stripe('pk_test_51T9lQ02Wal1pR9UuAqIvLDGstnDLSRdHoFKXNPXEYcirPIj5ca9IcXFpUT1hmrjdgQgOqyusWSTGTaUGeRN79zXo00lvAL7zxt');
+                stripe = Stripe('pk_test_51TCYBUAGFGK33vvuJ1r4qTEoAsWDxjqHKiEr6WeS8xz3V92dZsUNlXaP1uBTk7QTWfkBHK5oljNfB0EYHtMPk3aG006LzyfxuL');
                 
                 const appearance = {
                     theme: 'night',

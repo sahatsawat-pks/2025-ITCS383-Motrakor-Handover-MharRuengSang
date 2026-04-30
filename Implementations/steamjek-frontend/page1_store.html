@@ -570,13 +570,6 @@
       }
     }
 
-        authBtn.className = 'btn btn-primary btn-sm';
-        authBtn.onclick = Auth.showModal;
-        cartWrap.style.display = 'none';
-        updateSidebarUser();
-      }
-    }
-
     // --- GAME DATA LOADING ---
     let GAMES = [];
     let cart = new Set(); // Stores game_ids of items in cart
@@ -694,9 +687,9 @@
     async function initPage() {
       updateTopBar();
       
-      try {
-        // Fetch cart state if logged in
-        if (Auth.isAuthenticated()) {
+      // Fetch cart state if logged in
+      if (Auth.isAuthenticated()) {
+        try {
             const cartItems = await apiFetch('/cart');
             if (cartItems) {
                 cart = new Set(cartItems.map(item => item.game_id));
@@ -714,8 +707,12 @@
             }
             const countEl = document.getElementById('cart-count');
             if (countEl) countEl.innerText = cart.size;
+        } catch (authErr) {
+            console.error("Error loading cart or purchases:", authErr);
         }
+      }
 
+      try {
         // Fetch all games from DB
         const data = await apiFetch('/games');
         console.log("Loaded Games", data);

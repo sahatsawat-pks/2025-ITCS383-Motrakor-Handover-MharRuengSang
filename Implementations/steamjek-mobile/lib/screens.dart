@@ -27,7 +27,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
       final res = await ApiService.getGameDetails(widget.gameId);
       if (mounted) {
         setState(() {
-          _game = res['data'];
+          _game = res;
           _isLoading = false;
         });
       }
@@ -190,7 +190,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
       final res = await ApiService.getWishlist();
       if (mounted) {
         setState(() {
-          _wishlist = res['data'] ?? [];
+          _wishlist = res;
           _isLoading = false;
         });
       }
@@ -275,7 +275,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       final res = await ApiService.getListings();
       if (mounted) {
         setState(() {
-          _listings = res['data'] ?? [];
+          _listings = res;
           _isLoading = false;
         });
       }
@@ -375,7 +375,7 @@ class _PointShopScreenState extends State<PointShopScreen> {
       final rRes = await ApiService.getRewards();
       setState(() {
         points = pRes['points'] ?? 0;
-        rewards = rRes['rewards'] ?? [];
+        rewards = rRes;
         loading = false;
       });
     } catch (e) {
@@ -457,7 +457,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     try {
       final res = await ApiService.getThreads();
       setState(() {
-        threads = res['threads'] ?? [];
+        threads = res;
         loading = false;
       });
     } catch (e) {

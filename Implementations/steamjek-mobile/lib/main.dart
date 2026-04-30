@@ -6,7 +6,7 @@ import 'theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  Stripe.publishableKey = 'pk_test_your_stripe_publishable_key';
+  Stripe.publishableKey = 'pk_test_51TCYBUAGFGK33vvuJ1r4qTEoAsWDxjqHKiEr6WeS8xz3V92dZsUNlXaP1uBTk7QTWfkBHK5oljNfB0EYHtMPk3aG006LzyfxuL';
   runApp(const SteamJekApp());
 }
 
@@ -80,7 +80,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
       final res = await ApiService.getGames();
       if (mounted) {
         setState(() {
-          _games = res['data'] ?? [];
+          _games = res;
           _loading = false;
         });
       }
@@ -238,13 +238,27 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
 
   Future<void> _login() async {
-    final res = await ApiService.login(_email.text, _password.text);
-    if (res['token'] != null) {
-      await ApiService.saveToken(res['token']);
+    try {
+      final res = await ApiService.login(_email.text, _password.text);
+      if (res['token'] != null) {
+        await ApiService.saveToken(res['token']);
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainScreen()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(res['error'] ?? res['message'] ?? 'Login failed. Please check your credentials.')),
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainScreen()),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Connection error. Is the backend server running?')),
         );
       }
     }
@@ -323,12 +337,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password = TextEditingController();
 
   Future<void> _register() async {
-    await ApiService.register(_name.text, _email.text, _password.text);
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+    try {
+      final res = await ApiService.register(_name.text, _email.text, _password.text);
+      if (res['message'] == 'User registered successfully') {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(res['error'] ?? res['message'] ?? 'Registration failed.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Connection error. Is the backend server running?')),
+        );
+      }
     }
   }
 
@@ -472,12 +502,21 @@ class _StoreScreenState extends State<StoreScreen> {
   }
 
   Future<void> _fetchGames() async {
-    final res = await ApiService.getGames();
-    if (mounted) {
-      setState(() {
-        _games = res['data'] ?? [];
-        _loading = false;
-      });
+    try {
+      final res = await ApiService.getGames();
+      if (mounted) {
+        setState(() {
+          _games = res;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load games: $e')),
+        );
+      }
     }
   }
 
@@ -555,7 +594,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _fetchLibrary() async {
     final res = await ApiService.getLibrary();
-    if (mounted) setState(() => _purchases = res['data'] ?? []);
+    if (mounted) setState(() => _purchases = res);
   }
 
   @override
@@ -598,7 +637,7 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _fetchCart() async {
     final res = await ApiService.getCart();
-    if (mounted) setState(() => _cart = res['data'] ?? []);
+    if (mounted) setState(() => _cart = res);
   }
 
   Future<void> _checkout() async {
