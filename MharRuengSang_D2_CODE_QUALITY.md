@@ -21,7 +21,7 @@
 ![Issues After](Image/Issue_After.png)
 
 ### Code Quality Improvements Implemented:
-1. **Unlocking 98.47% Coverage**: 
+1. **Unlocking 96.3% Coverage**: 
    - Dynamically routed the testing environment to use standard `pg.Pool` driver, passing 180/180 unit & integration tests cleanly.
    - Linked Jest’s `lcov.info` paths into `sonar.javascript.lcov.reportPaths` to import true coverage metrics.
 2. **Duplication Fixes**:
